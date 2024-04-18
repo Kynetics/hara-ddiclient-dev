@@ -20,12 +20,18 @@ class MessageListenerImpl(
     private val clientData: HaraClientData
 ): MessageListener {
     override fun onMessage(message: MessageListener.Message) {
-        println(
-            MessageFormat.format(
-            Configuration.logMessageTemplate,
-            virtualDeviceId,
-            clientData.tenant,
-            clientData.controllerId,
-            clientData.gatewayToken,message))
+        when(message) {
+            MessageListener.Message.State.Idle -> {}
+            MessageListener.Message.Event.Polling -> {}
+            else -> {
+                println(
+                    MessageFormat.format(
+                        Configuration.logMessageTemplate,
+                        virtualDeviceId,
+                        clientData.tenant,
+                        clientData.controllerId,
+                        clientData.gatewayToken,message))
+            }
+        }
     }
 }

@@ -28,7 +28,7 @@ object Configuration {
 
     val tenant = env("HAWKBIT_TENANT", "DEFAULT")
     val controllerIdGenerator = { id: Int ->
-        System.getenv("HAWKBIT_CONTROLLER_ID")?.let { "${it}_$id" } ?: UUID.randomUUID().toString()
+        env("HAWKBIT_CONTROLLER_ID")?.let { "${it}_$id" } ?: UUID.randomUUID().toString()
     }
     val url = env("HAWKBIT_URL", "http://localhost:8080")
     val gatewayToken = env("HAWKBIT_GATEWAY_TOKEN", "")
@@ -147,7 +147,10 @@ object Configuration {
     val writeTimeout = env("HARA_WRITE_TIMEOUT", "10").toLong()
 
     private fun env(envVariable:String, defaultValue:String):String{
-        return System.getenv(envVariable) ?: defaultValue
+        return env(envVariable) ?: defaultValue
     }
 
+    private fun env(envVariable:String):String?{
+        return System.getenv(envVariable)
+    }
 }

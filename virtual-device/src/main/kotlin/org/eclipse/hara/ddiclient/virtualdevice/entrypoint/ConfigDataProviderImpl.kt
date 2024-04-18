@@ -21,13 +21,16 @@ class ConfigDataProviderImpl(
 ): ConfigDataProvider {
     override fun configData(): Map<String, String> {
         return Configuration.targetAttributes
-            .split("|")
-            .map { it.split(",").let { list -> list[0] to MessageFormat.format(list[1],
-                virtualDeviceId,
-                clientData.tenant,
-                clientData.controllerId,
-                clientData.gatewayToken) }
+            .split("|").associate {
+                it.split(",").let { list ->
+                    list[0] to MessageFormat.format(
+                        list[1],
+                        virtualDeviceId,
+                        clientData.tenant,
+                        clientData.controllerId,
+                        clientData.gatewayToken
+                    )
+                }
             }
-            .toMap()
     }
 }
