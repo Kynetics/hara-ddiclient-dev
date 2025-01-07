@@ -20,13 +20,14 @@ import kotlin.random.Random.Default.nextLong
 
 val virtualMachineGlobalScope = CoroutineScope(Dispatchers.Default)
 
-fun main() {
-    Configuration.apply {
+fun main() = runBlocking {
+    with(Configuration) {
         System.setProperty(DEFAULT_LOG_LEVEL_KEY, logLevel)
         val connTimeoutDuration = Duration.ofSeconds(connectTimeout)
         val callTimeoutDuration = Duration.ofSeconds(callTimeout)
         val readTimeoutDuration = Duration.ofSeconds(readTimeout)
         val writeTimeoutDuration = Duration.ofSeconds(writeTimeout)
+        println("Virtual Device Starting Delay: $virtualDeviceStartingDelay")
 
         repeat(poolSize) {
             val clientData = HaraClientData(
@@ -47,10 +48,9 @@ fun main() {
                 println("Virtual Device $it starts in $delay milliseconds")
                 delay(delay)
                 getClient(this, clientData, it, httpBuilder).startAsync()
-            }
+            }.join()
         }
     }
-    Unit
 }
 
 private fun getClient(

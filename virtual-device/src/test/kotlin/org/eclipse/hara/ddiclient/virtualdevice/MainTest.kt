@@ -16,6 +16,7 @@ import io.mockk.every
 import io.mockk.mockkObject
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import okhttp3.Credentials
 import org.testng.Assert
@@ -55,7 +56,9 @@ class MainTest {
     @Test(enabled = true)
     fun testVirtualDeviceCreationAndPolling() {
         runBlocking {
-            main()
+            virtualMachineGlobalScope.launch {
+                main()
+            }
 
             delay(2_000)
             val targets = managementApi.getAllTargets(BASIC_AUTH)
