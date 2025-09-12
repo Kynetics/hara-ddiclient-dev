@@ -12,8 +12,6 @@
 
 package org.eclipse.hara.ddiclient.virtualdevice
 
-import io.mockk.every
-import io.mockk.mockkObject
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -23,12 +21,12 @@ import org.testng.Assert
 import org.testng.annotations.BeforeClass
 import org.testng.annotations.Test
 
-class MainTest {
+class VirtualDeviceTest {
 
     companion object {
         const val HAWKBIT_URL = "http://localhost:8080"
         val BASIC_AUTH = Credentials.basic("test", "test")
-        val GATEWAY_TOKEN = "66076ab945a127dd80b15e9011995109"
+        const val GATEWAY_TOKEN = "66076ab945a127dd80b15e9011995109"
 
     }
 
@@ -37,27 +35,26 @@ class MainTest {
 
     @BeforeClass
     fun setUp() {
-        mockkObject(Configuration)
-        every { Configuration.url } returns HAWKBIT_URL
-        every { Configuration.poolSize } returns 2
-        every { Configuration.gatewayToken } returns GATEWAY_TOKEN
-        every { Configuration.controllerIdGenerator } returns {
-            val id = "VirtualDevice-number-$it"
-            devicesControllerId.add(id)
-            id
-        }
         managementApi = ManagementClient.createManagementApi(HAWKBIT_URL)
         runBlocking {
             managementApi.setPollingTime(BASIC_AUTH, ServerSystemConfig("00:00:10"))
         }
-
     }
 
     @Test(enabled = true, timeOut = 60_000)
     fun testVirtualDeviceCreationAndPolling() {
         runBlocking {
+            val cfg = Configuration.default().copy(url = HAWKBIT_URL)
+                .copy(poolSize = 2)
+                .copy(gatewayToken = GATEWAY_TOKEN)
+                .copy(controllerIdGenerator = {
+                    val id = "VirtualDevice-number-$it"
+                    devicesControllerId.add(id)
+                    id
+                })
+            val device = VirtualDevice(cfg)
             launch {
-                main()
+                device.start()
             }
             delay(5_000)
 
@@ -73,7 +70,7 @@ class MainTest {
                 delay(1_000)
             } while (devicesControllerId.isNotEmpty())
 
-            virtualMachineGlobalScope.cancel()
+            device.virtualMachineGlobalScope.cancel()
         }
     }
 }

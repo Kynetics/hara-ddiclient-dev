@@ -15,32 +15,32 @@ import okio.Sink
 import okio.Source
 import org.joda.time.Duration
 import java.net.Socket
+import java.util.Properties
 import java.util.UUID
 
-object Configuration {
+data class Configuration(
 
-    val logLevel = env("HARA_LOG_LEVEL", "TRACE")
+    val logLevel: String,
 
     /**
      * Number of virtual device generated
      */
-    val poolSize = env("HARA_CLIENT_POOL_SIZE", "1").toInt()
+    val poolSize: Int,
 
-    val tenant = env("HAWKBIT_TENANT", "DEFAULT")
-    val controllerIdGenerator = { id: Int ->
-        env("HAWKBIT_CONTROLLER_ID")?.let { "${it}_$id" } ?: UUID.randomUUID().toString()
-    }
-    val url = env("HAWKBIT_URL", "http://localhost:8080")
-    val gatewayToken = env("HAWKBIT_GATEWAY_TOKEN", "")
+    val tenant: String,
+
+    val controllerIdGenerator: (Int) -> String,
+
+    val url: String,
+
+    val gatewayToken: String,
 
     /**
      * Each virtual device will be started with a random delay in [0, HARA_VIRTUAL_DEVICE_STARTING_DELAY]
      */
-    val virtualDeviceStartingDelay = Duration.standardSeconds(
-        env("HARA_VIRTUAL_DEVICE_STARTING_DELAY", "1").toLong()
-    ).millis
+    val virtualDeviceStartingDelay: Long,
 
-    val storagePath = env("HARA_STORAGE_PATH", "/client")
+    val storagePath: String,
 
     /**
      * A list of target attributes for each device.
@@ -61,7 +61,7 @@ object Configuration {
      *  3- client = kotlin
      *
      */
-    val targetAttributes = env("HARA_TARGET_ATTRIBUTES","client,kotlin virtual device")
+    val targetAttributes: String,
 
     /**
      *
@@ -73,7 +73,7 @@ object Configuration {
      * {4} is replaced with the message
      *
      */
-    val logMessageTemplate = env("HARA_LOG_MESSAGE", "{4}")
+    val logMessageTemplate: String,
 
     /**
      *
@@ -85,8 +85,7 @@ object Configuration {
      * {4} is replaced with the gatewayToken
      *
      */
-
-    val srvMsgTemplateBeforeUpdate = env("HARA_SRV_MSF_BEFORE_UPDATE", "Applying the sw {0} for target {1}")
+    val srvMsgTemplateBeforeUpdate: String,
 
     /**
      *
@@ -98,10 +97,11 @@ object Configuration {
      * {4} is replaced with the gatewayToken
      *
      */
-    val srvMsgTemplateAfterUpdate = env("HARA_SRV_MSF_AFTER_UPDATE","Applied the sw {0} for target {1}")
+    val srvMsgTemplateAfterUpdate: String,
 
-    val grantDownload = env("HARA_GRANT_DOWNLOAD", "true").toBoolean()
-    val grantUpdate = env("HARA_GRANT_UPDATE", "true").toBoolean()
+    val grantDownload: Boolean,
+
+    val grantUpdate: Boolean,
 
     /**
      * Sets the default connect timeout for new connections in seconds.
@@ -110,7 +110,7 @@ object Configuration {
      * The connect timeout is applied when connecting a TCP socket to the target host.
      * The default value is 10 seconds.
      */
-    val connectTimeout = env("HARA_CONNECT_TIMEOUT", "10").toLong()
+    val connectTimeout: Long,
 
     /**
      * Sets the default timeout for complete calls in seconds.
@@ -121,7 +121,7 @@ object Configuration {
      * period.
      * The default value is 0 which imposes no timeout.
      */
-    val callTimeout = env("HARA_CALL_TIMEOUT", "0").toLong()
+    val callTimeout: Long,
 
     /**
      * Sets the default read timeout for new connections. A value of 0 means no timeout, otherwise
@@ -133,7 +133,7 @@ object Configuration {
      * @see Socket.setSoTimeout
      * @see Source.timeout
      */
-    val readTimeout = env("HARA_READ_TIMEOUT", "10").toLong()
+    val readTimeout: Long,
 
     /**
      * Sets the default write timeout for new connections. A value of 0 means no timeout, otherwise
@@ -144,13 +144,52 @@ object Configuration {
      *
      * @see Sink.timeout
      */
-    val writeTimeout = env("HARA_WRITE_TIMEOUT", "10").toLong()
+    val writeTimeout: Long
+) {
+    companion object {
 
-    private fun env(envVariable:String, defaultValue:String):String{
-        return env(envVariable) ?: defaultValue
-    }
+        fun default(): Configuration {
 
-    private fun env(envVariable:String):String?{
-        return System.getenv(envVariable)
+            val propertiesFromFile = Configuration::class.java.classLoader
+                .getResourceAsStream("application.properties")?.use { inputStream ->
+                    Properties().apply { load(inputStream) }
+                }
+
+            fun property(prop: String): String? {
+                val properties = propertiesFromFile?.apply { putAll(System.getProperties()) } ?: System.getProperties()
+                val envName = prop.uppercase().replace(".", "_")
+                return properties.getProperty(prop)?.let { propValue ->
+                    if (propValue.trim() == "\${${envName}}") System.getenv(envName)
+                    else propValue
+                }
+            }
+
+            fun property(prop: String, defaultValue: String): String {
+                return property(prop) ?: defaultValue
+            }
+
+            return Configuration(
+                property("virtdevice.log.level", "TRACE"),
+                property("virtdevice.client.pool.size", "1").toInt(),
+                property("virtdevice.hawkbit.tenant", "DEFAULT"),
+                { id -> property("virtdevice.hawkbit.controller.id")
+                    ?.let { "${it}_$id" } ?: UUID.randomUUID().toString() },
+                property("virtdevice.hawkbit.url", "http://localhost:8080"),
+                property("virtdevice.hawkbit.gateway.token", ""),
+                Duration.standardSeconds(
+                    property("virtdevice.starting.delay", "1").toLong()).millis,
+                property("virtdevice.storage.path", "/client"),
+                property("virtdevice.target.attributes", "client,kotlin virtual device"),
+                property("virtdevice.log.message", "{4}"),
+                property("virtdevice.srv.msg.before.update", "Applying the sw {0} for target {1}"),
+                property("virtdevice.srv.msg.after.update", "Applied the sw {0} for target {1}"),
+                property("virtdevice.grant.download", "true").toBoolean(),
+                property("virtdevice.grant.update", "true").toBoolean(),
+                property("virtdevice.connect.timeout", "10").toLong(),
+                property("virtdevice.call.timeout", "0").toLong(),
+                property("virtdevice.read.timeout", "10").toLong(),
+                property("virtdevice.write.timeout", "10").toLong()
+            )
+        }
     }
 }

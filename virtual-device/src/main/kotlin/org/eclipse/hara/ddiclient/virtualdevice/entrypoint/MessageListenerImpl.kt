@@ -16,6 +16,7 @@ import org.eclipse.hara.ddiclient.virtualdevice.Configuration
 import java.text.MessageFormat
 
 class MessageListenerImpl(
+    private val configuration: Configuration,
     private val virtualDeviceId:Int,
     private val clientData: HaraClientData
 ): MessageListener {
@@ -26,7 +27,7 @@ class MessageListenerImpl(
             else -> {
                 println(
                     MessageFormat.format(
-                        Configuration.logMessageTemplate,
+                        configuration.logMessageTemplate,
                         virtualDeviceId,
                         clientData.tenant,
                         clientData.controllerId,

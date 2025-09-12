@@ -18,6 +18,7 @@ import org.eclipse.hara.ddiclient.virtualdevice.Configuration
 import java.text.MessageFormat
 
 class UpdaterImpl(
+    private val configuration: Configuration,
     private val virtualDeviceId:Int,
     private val clientData: HaraClientData
 ): Updater {
@@ -42,7 +43,7 @@ class UpdaterImpl(
 
             messenger.sendMessageToServer(
                 MessageFormat.format(
-                    Configuration.srvMsgTemplateBeforeUpdate,
+                    configuration.srvMsgTemplateBeforeUpdate,
                     module.name,
                     virtualDeviceId,
                     clientData.tenant,
@@ -54,7 +55,7 @@ class UpdaterImpl(
 
             messenger.sendMessageToServer(
                 MessageFormat.format(
-                    Configuration.srvMsgTemplateAfterUpdate,
+                    configuration.srvMsgTemplateAfterUpdate,
                     module.name,
                     virtualDeviceId,
                     clientData.tenant,

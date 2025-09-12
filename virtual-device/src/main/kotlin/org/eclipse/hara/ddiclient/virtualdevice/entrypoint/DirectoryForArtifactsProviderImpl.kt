@@ -14,6 +14,8 @@ import org.eclipse.hara.ddiclient.api.DirectoryForArtifactsProvider
 import org.eclipse.hara.ddiclient.virtualdevice.Configuration
 import java.io.File
 
-class DirectoryForArtifactsProviderImpl(private val controllerId:String): DirectoryForArtifactsProvider {
-    override fun directoryForArtifacts(): File = File("${Configuration.storagePath}/$controllerId")
+class DirectoryForArtifactsProviderImpl(
+    private val configuration: Configuration,
+    private val controllerId:String): DirectoryForArtifactsProvider {
+    override fun directoryForArtifacts(): File = File("${configuration.storagePath}/$controllerId")
 }

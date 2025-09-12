@@ -15,12 +15,12 @@ import org.eclipse.hara.ddiclient.virtualdevice.Configuration
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
 
-class DeploymentPermitProviderImpl: DeploymentPermitProvider {
+class DeploymentPermitProviderImpl(private val configuration: Configuration): DeploymentPermitProvider {
     override fun downloadAllowed(): Deferred<Boolean> {
-        return CompletableDeferred(Configuration.grantDownload)
+        return CompletableDeferred(configuration.grantDownload)
     }
 
     override fun updateAllowed(): Deferred<Boolean> {
-        return CompletableDeferred(Configuration.grantUpdate)
+        return CompletableDeferred(configuration.grantUpdate)
     }
 }
