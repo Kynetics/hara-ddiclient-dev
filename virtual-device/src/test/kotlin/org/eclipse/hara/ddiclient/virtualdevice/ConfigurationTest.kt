@@ -10,20 +10,20 @@ class ConfigurationTest {
     
     @AfterTest
     fun restore() {
-        // Reset System Properties prima di ogni test
+        // Reset System Properties before each test
         clearSystemProperties()
         System.setProperties(originalProperties)
     }
 
     @Test
     fun `should load default values when no properties or environment variables are set`() {
-        // Given: nessuna property o variabile d'ambiente impostata
+        // Given: no property or environment variable set
         clearSystemProperties()
         
-        // When: creo una nuova configurazione
+        // When: create a new configuration
         val config = Configuration.default()
         
-        // Then: dovrebbe utilizzare i valori di default
+        // Then: should use default values
         assertEquals(config.logLevel, "TRACE")
         assertEquals(config.poolSize, 1)
         assertEquals(config.tenant, "DEFAULT")
@@ -45,15 +45,15 @@ class ConfigurationTest {
 
     @Test
     fun `should prioritize system properties over application properties`() {
-        // Given: System Properties impostate
+        // Given: System Properties set
         System.setProperty("virtdevice.log.level", "INFO")
         System.setProperty("virtdevice.client.pool.size", "3")
         System.setProperty("virtdevice.hawkbit.tenant", "SYSTEM_TENANT")
         
-        // When: creo una nuova configurazione
+        // When: create a new configuration
         val config = Configuration.default()
         
-        // Then: dovrebbe utilizzare i valori delle System Properties
+        // Then: should use the values from System Properties
         assertEquals(config.logLevel, "INFO")
         assertEquals(config.poolSize, 3)
         assertEquals(config.tenant, "SYSTEM_TENANT")
@@ -61,29 +61,29 @@ class ConfigurationTest {
 
     @Test
     fun `should handle boolean properties correctly`() {
-        // Given: System Properties per valori booleani
+        // Given: System Properties for boolean values
         System.setProperty("virtdevice.grant.download", "false")
         System.setProperty("virtdevice.grant.update", "true")
         
-        // When: creo una nuova configurazione
+        // When: create a new configuration
         val config = Configuration.default()
         
-        // Then: dovrebbe convertire correttamente i valori booleani
+        // Then: should correctly convert boolean values
         assertEquals(config.grantDownload, false)
         assertEquals(config.grantUpdate, true)
     }
 
     @Test
     fun `should handle numeric properties correctly`() {
-        // Given: System Properties per valori numerici
+        // Given: System Properties for numeric values
         System.setProperty("virtdevice.client.pool.size", "15")
         System.setProperty("virtdevice.connect.timeout", "60")
         System.setProperty("virtdevice.call.timeout", "120")
         
-        // When: creo una nuova configurazione
+        // When: create a new configuration
         val config = Configuration.default()
         
-        // Then: dovrebbe convertire correttamente i valori numerici
+        // Then: should correctly convert numeric values
         assertEquals(config.poolSize, 15)
         assertEquals(config.connectTimeout, 60L)
         assertEquals(config.callTimeout, 120L)
@@ -91,34 +91,34 @@ class ConfigurationTest {
 
     @Test
     fun `should handle controller id generator correctly`() {
-        // Given: System Property per controller ID
+        // Given: System Property for controller ID
         System.setProperty("virtdevice.hawkbit.controller.id", "TEST_CONTROLLER")
         
-        // When: creo una nuova configurazione e genero un ID
+        // When: create a new configuration and generate an ID
         val config = Configuration.default()
         val generatedId = config.controllerIdGenerator(1)
         
-        // Then: dovrebbe utilizzare il template con l'ID virtuale
+        // Then: should use the template with the virtual ID
         assertEquals(generatedId, "TEST_CONTROLLER_1")
     }
 
     @Test
     fun `should generate UUID when controller id is not set`() {
-        // Given: nessun controller ID impostato
+        // Given: no controller ID set
         clearSystemProperties()
         
-        // When: creo una nuova configurazione e genero un ID
+        // When: create a new configuration and generate an ID
         val config = Configuration.default()
         val generatedId = config.controllerIdGenerator(1)
         
-        // Then: dovrebbe generare un UUID
+        // Then: should generate a UUID
         assert(generatedId.matches(Regex("[0-9a-f-]{36}"))) {
             "Generated ID should be a valid UUID format, but was: $generatedId"
         }
     }
 
     private fun clearSystemProperties() {
-        // Rimuove tutte le System Properties che iniziano con "virtdevice."
+        // Removes all System Properties that start with "virtdevice."
         System.getProperties().keys.toList()
             .filterIsInstance<String>()
             .filter { it.startsWith("virtdevice.") }

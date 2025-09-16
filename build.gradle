@@ -36,7 +36,7 @@ sonar {
     }
 }
 
-allprojects {
+allprojects { prj ->
     apply plugin: 'org.jetbrains.kotlin.jvm'
     apply plugin: 'maven-publish'
     apply plugin: 'java'
@@ -74,6 +74,63 @@ allprojects {
             html.required = true
         }
     }
+
+    test {
+        useTestNG()
+
+        afterTest { desc, result ->
+            logger.quiet "Executing test ${desc.name} [${desc.className}] with result: ${result.resultType}"
+        }
+    }
+
+    sourceSets {
+        integration {
+            kotlin.srcDir "${prj.getProjectDir()}/src/integration/kotlin"
+            resources.srcDir "${prj.getProjectDir()}/src/integration/resources"
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+        }
+    }
+
+    configurations {
+        integrationImplementation.extendsFrom testImplementation
+        integrationRuntimeOnly.extendsFrom testRuntimeOnly
+    }
+
+    tasks.register('integrationTest', Test) {
+        group = 'verification'
+        description = 'Runs the integration tests.'
+
+        dependsOn ':waitingHawkbitServer'
+        finalizedBy ':stopHawkbitServer'
+
+        shouldRunAfter(tasks.test)
+
+        useTestNG()
+
+        testClassesDirs = sourceSets.integration.output.classesDirs
+        classpath = sourceSets.integration.runtimeClasspath
+
+        systemProperty("LOG_HTTP", project.findProperty("logHttp") ?: "false")
+        systemProperty("LOG_INTERNAL", project.findProperty("logInternal") ?: "false")
+        systemProperty("BACKOFF_INTERVAL_SECONDS", 45)
+        systemProperty("FREQUENT_POLLING_WHILE_UPDATING", false)
+
+        testLogging {
+            events "passed", "skipped", "failed"
+            exceptionFormat "full"
+        }
+
+        afterTest { desc, result ->
+            logger.quiet "Executing integration test ${desc.name} [${desc.className}] with result: ${result.resultType}"
+        }
+
+    }
+
+    tasks.check {
+        dependsOn tasks.test
+        dependsOn tasks.integrationTest
+    }
 }
 
 project(':ddi-consumer') {
@@ -98,10 +155,6 @@ project(':ddi-consumer') {
             implementation libs.gson
             testImplementation libs.testng
         }
-        test {
-            useTestNG()
-        }
-
     }
 }
 
@@ -146,25 +199,6 @@ project(':virtual-device'){
         testImplementation libs.retrofit.converter.gson
     }
 
-    jacocoTestReport {
-        mustRunAfter test
-        sourceSets sourceSets.main
-
-        reports {
-            xml.required = true
-            html.required = true
-        }
-    }
-
-    test {
-        dependsOn ':waitingHawkbitServer'
-
-        useTestNG()
-
-        afterTest { desc, result ->
-            logger.quiet "Executing test ${desc.name} [${desc.className}] with result: ${result.resultType}"
-        }
-    }
 
     mainClassName = 'org.eclipse.hara.ddiclient.virtualdevice.MainKt'
 
@@ -240,7 +274,7 @@ task stopHawkbitServer() {
     doFirst {
         if (!keep_test_container_alive) {
             exec {
-                workingDir 'docker/test/'
+                workingDir "${rootDir}/docker/test/"
                 commandLine 'docker', 'compose', 'down'
             }
         }
@@ -251,14 +285,14 @@ task restartHawkbitServer() {
     group 'testing'
     doFirst {
         exec {
-            workingDir 'docker/test/'
+            workingDir "${rootDir}/docker/test/"
             commandLine 'docker', 'compose', 'down'
         }
     }
 
     doLast{
         exec {
-            workingDir 'docker/test/'
+            workingDir "${rootDir}/docker/test/"
             commandLine 'docker', 'compose', 'up', '--detach'
         }
     }
@@ -281,27 +315,8 @@ task waitingHawkbitServer(){
 
 }
 
-test.dependsOn waitingHawkbitServer
-test.dependsOn cleanTest
-test.finalizedBy stopHawkbitServer
-
 group 'org.eclipse.hara.hara-ddiclient'
 version app_version
-
-test {
-    systemProperty("LOG_HTTP", project.findProperty("logHttp") ?: "false")
-    systemProperty("LOG_INTERNAL", project.findProperty("logInternal") ?: "false")
-    systemProperty("BACKOFF_INTERVAL_SECONDS", 45)
-    systemProperty("FREQUENT_POLLING_WHILE_UPDATING", false)
-
-    dependsOn ':virtual-device:test'
-
-    useTestNG()
-
-    afterTest { desc, result ->
-        logger.quiet "Executing test ${desc.name} [${desc.className}] with result: ${result.resultType}"
-    }
-}
 
 
 dependencies{
