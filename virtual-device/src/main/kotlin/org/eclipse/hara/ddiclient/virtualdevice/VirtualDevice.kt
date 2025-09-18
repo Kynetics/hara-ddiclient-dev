@@ -13,6 +13,7 @@ import kotlinx.coroutines.*
 import okhttp3.OkHttpClient
 import org.eclipse.hara.ddiclient.api.HaraClientDefaultImpl
 import org.eclipse.hara.ddiclient.api.HaraClientData
+import org.eclipse.hara.ddiclient.api.Updater
 import org.eclipse.hara.ddiclient.virtualdevice.entrypoint.*
 import org.slf4j.simple.SimpleLogger.DEFAULT_LOG_LEVEL_KEY
 import java.time.Duration
@@ -26,7 +27,12 @@ class VirtualDevice(private val configuration: Configuration = Configuration.def
 
     val virtualMachineGlobalScope = CoroutineScope(Dispatchers.Default)
 
-    fun start() = runBlocking(virtualMachineGlobalScope.coroutineContext) {
+    fun start() = startWithUpdaters { conf, devId, hcd ->
+        listOf(UpdaterImpl(conf, devId, hcd))
+    }
+
+    fun startWithUpdaters(updatersFactory: (Configuration, Int, HaraClientData) -> List<Updater>) =
+        runBlocking(virtualMachineGlobalScope.coroutineContext) {
         with(configuration) {
             System.setProperty(DEFAULT_LOG_LEVEL_KEY, logLevel)
             val connTimeoutDuration = Duration.ofSeconds(connectTimeout)
@@ -54,7 +60,8 @@ class VirtualDevice(private val configuration: Configuration = Configuration.def
                         val delay = nextLong(0, virtualDeviceStartingDelay)
                         println("Virtual Device $it starts in $delay milliseconds")
                         delay(delay)
-                        getClient(this, clientData, it, httpBuilder).startAsync()
+                        getClient(this, clientData, it, httpBuilder, updatersFactory)
+                            .startAsync()
                     }
                 }
             }
@@ -65,7 +72,8 @@ class VirtualDevice(private val configuration: Configuration = Configuration.def
         scope: CoroutineScope,
         clientData: HaraClientData,
         virtualDeviceId: Int,
-        httpBuilder: OkHttpClient.Builder
+        httpBuilder: OkHttpClient.Builder,
+        updatersFactory: (Configuration, Int, HaraClientData) -> List<Updater>
     ): HaraClientDefaultImpl {
         return HaraClientDefaultImpl().apply {
             init(
@@ -74,7 +82,7 @@ class VirtualDevice(private val configuration: Configuration = Configuration.def
                 configDataProvider = ConfigDataProviderImpl(configuration, virtualDeviceId, clientData),
                 softDeploymentPermitProvider = DeploymentPermitProviderImpl(configuration),
                 messageListeners = listOf(MessageListenerImpl(configuration, virtualDeviceId, clientData)),
-                updaters = listOf(UpdaterImpl(configuration, virtualDeviceId, clientData)),
+                updaters = updatersFactory(configuration, virtualDeviceId, clientData),
                 downloadBehavior = DownloadBehaviorImpl(),
                 scope = scope,
                 httpBuilder = httpBuilder
