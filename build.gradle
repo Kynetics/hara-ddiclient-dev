@@ -19,12 +19,13 @@ plugins {
     alias(libs.plugins.sonarqube)  apply true
 }
 
-final def app_version = '2.0.0'
 ext.keep_test_container_alive = project.hasProperty('keep_test_container_alive') ? project.getProperty('keep_test_container_alive').toBoolean() : false
 
 def sonarProjectKey = System.getenv("SONAR_CLOUD_PROJECT_KEY")
 def sonarProjectName = System.getenv("SONAR_CLOUD_PROJECT_NAME")
 def sonarProjectOrganization = System.getenv("SONAR_CLOUD_ORGANIZATION")
+
+group 'org.eclipse.hara'
 
 sonar {
     properties {
@@ -44,17 +45,32 @@ allprojects { prj ->
 
     apply from: "$rootDir/ktlint.gradle"
 
-    dependencies {
+    version '2.0.0'
 
+    if (prj != rootProject) {
+        group "${prj.parent.group}.${prj.parent.name}"
+    }
+
+    dependencies {
         implementation libs.kotlin.stdlib
         implementation libs.kotlin.coroutines.jdk8
         implementation libs.joda.time
     }
 
+    // AWS CodeArtifact publishing configuration
     publishing {
         publications {
-            mavenJava(MavenPublication) {
-                from components.java
+            mavenKotlin(MavenPublication) {
+                from components.kotlin
+            }
+        }
+        repositories {
+            maven {
+                url 'https://kynetics-578664227078.d.codeartifact.us-west-2.amazonaws.com/maven/kynetics/'
+                credentials {
+                    username "aws"
+                    password System.env.CODEARTIFACT_AUTH_TOKEN
+                }
             }
         }
     }
@@ -134,8 +150,6 @@ allprojects { prj ->
 }
 
 project(':ddi-consumer') {
-    group 'org.eclipse.hara.hara-ddiclient'
-    version app_version
 
     final def subprj = ':ddi-consumer:ddi-api'
     dependencies {
@@ -159,26 +173,30 @@ project(':ddi-consumer') {
 }
 
 project(':ddi-consumer:ddi-api') {
-    group 'org.eclipse.hara.hara-ddiclient.ddi-consumer'
-    version app_version
-
     dependencies {
     }
 }
 
 project(':hara-ddiclient-api') {
-    group 'org.eclipse.hara.hara-ddiclient.api'
-    version app_version
     dependencies {
         implementation libs.okhttp
     }
 }
 
-project(':virtual-device'){
-    group 'org.eclipse.hara.hara-virtual-device'
-    version app_version
+project(':virtual-device'){ prj ->
+    version '2.1.0'
     apply plugin: 'application'
     apply plugin: 'jacoco'
+    apply plugin: 'maven-publish'
+
+    // AWS CodeArtifact publishing configuration
+    publishing {
+        publications {
+            mavenKotlin(MavenPublication) {
+                version = prj.version
+            }
+        }
+    }
 
     dependencies {
         implementation rootProject
@@ -314,10 +332,6 @@ task waitingHawkbitServer(){
     }
 
 }
-
-group 'org.eclipse.hara.hara-ddiclient'
-version app_version
-
 
 dependencies{
     implementation project(':hara-ddiclient-api')
