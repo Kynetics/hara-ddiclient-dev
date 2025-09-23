@@ -45,7 +45,7 @@ allprojects { prj ->
 
     apply from: "$rootDir/ktlint.gradle"
 
-    version '2.0.0'
+    version '2.1.0'
 
     if (prj != rootProject) {
         group "${prj.parent.group}.${prj.parent.name}"
@@ -218,7 +218,7 @@ project(':virtual-device'){ prj ->
     }
 
 
-    mainClassName = 'org.eclipse.hara.ddiclient.virtualdevice.MainKt'
+    mainClassName = 'org.eclipse.hara.ddiclient.virtualdevice.VirtualDeviceKt'
 
     tasks.withType(KotlinCompile).configureEach {
         kotlinOptions.freeCompilerArgs += ["-opt-in=kotlin.RequiresOptIn"]
@@ -282,7 +282,7 @@ task buildImage(){
     doLast{
         exec {
             workingDir dockerClientDir
-            commandLine "docker", "build", ".", "--tag", "hara-virtual-device:$app_version"
+            commandLine "docker", "build", ".", "--tag", "hara-virtual-device:$version"
         }
     }
 }
